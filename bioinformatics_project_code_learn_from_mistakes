@@ -1,0 +1,274 @@
+import pandas as pd
+import numpy as np
+
+##load all 3 proteomics data files
+df_01 = pd.read_excel ('/Users/cristinaraya/Documents/Homework_BCH394P:364C/project/Explants_IEX_2202021_annotated.xlsx')
+df_02 = pd.read_excel ('/Users/cristinaraya/Documents/Homework_BCH394P:364C/project/Explants_SEC_2021105_annotated.xlsx')
+df_03 = pd.read_excel ('/Users/cristinaraya/Documents/Homework_BCH394P:364C/project/OP_frog_DMZ_SEC_062016_prot_count_mFDRpsm001.group.unique_rmzero.clustered_veNOG_human_ordered.xlsx')
+#df_01.shape
+
+##modify all 3 datasets to only have protein names and fraction columns 
+df01 = df_01.loc[:, [col for col in df_01.columns if "DMZ_IEX" in col or "Protein_names" in col]]
+df01.head()
+df02 = df_02.loc[:, [col for col in df_02.columns if "Explants_SEC" in col or "Protein_names_hu" in col]]
+#df02.head()
+df03 = df_03.loc[:, [col for col in df_03.columns if "DMZ_SEC" in col or "human_protein_names" in col!= "human_Entry_names"]]
+#df03.head()
+
+#cannot use protein names in data analysis, so use float to only get numbers
+df01_numeric = df01.iloc[:, 1:].astype(float)
+df02_numeric = df02.iloc[:, 1:].astype(float)
+df03_numeric = df03.iloc[:, 1:].astype(float)
+
+#made contiguous
+df01_numeric_contig = np.ascontiguousarray(df01_numeric)
+df02_numeric_contig = np.ascontiguousarray(df02_numeric)
+df03_numeric_contig = np.ascontiguousarray(df03_numeric)
+
+from Bio.Cluster import kcluster
+import plotly.express as px
+#Kclustering for dataframes
+#Kclustering DF01
+clusterid1, error1, found1 = kcluster(df01_numeric_contig, nclusters=20)
+clusterid2, error2, found2 = kcluster(df02_numeric_contig, nclusters=20)
+clusterid3, error3, found3 = kcluster(df03_numeric_contig, nclusters=20)
+cluster_assignments1 = clusterid1 #print(clusterid)#print(cluster_assignments)
+cluster_assignments2 = clusterid2
+cluster_assignments3 = clusterid3
+
+##for DF01 
+
+# Get the names of the proteins
+row_labels1 = list(df01.iloc[:, 0])
+# convert df0X_numeric_contig to a DataFrame
+frame1_numeric_contig = pd.DataFrame(df01_numeric_contig)
+# Create a DataFrame from the cluster_assignments array
+cluster_df1 = pd.DataFrame({'Cluster': cluster_assignments1})
+#concatenate data to new dataframes
+data_k1 = pd.concat([pd.DataFrame(row_labels1, columns=['Protein']), frame1_numeric_contig, cluster_df1], axis=1)
+##for DF02 
+
+# Get the names of the proteins
+row_labels2 = list(df02.iloc[:, 0])
+# convert df0X_numeric_contig to a DataFrame
+frame2_numeric_contig = pd.DataFrame(df02_numeric_contig)
+# Create a DataFrame from the cluster_assignments array
+cluster_df2 = pd.DataFrame({'Cluster': cluster_assignments2})
+#concatenate data to new dataframes
+data_k2 = pd.concat([pd.DataFrame(row_labels2, columns=['Protein']), frame2_numeric_contig, cluster_df2], axis=1)
+#protein names
+
+##for DF03 
+
+# Get the names of the proteins
+row_labels3 = list(df03.iloc[:, 0])
+# convert df0X_numeric_contig to a DataFrame
+frame3_numeric_contig = pd.DataFrame(df03_numeric_contig)
+# Create a DataFrame from the cluster_assignments array
+cluster_df3 = pd.DataFrame({'Cluster': cluster_assignments3})
+#concatenate data to new dataframes
+data_k3 = pd.concat([pd.DataFrame(row_labels3, columns=['Protein']), frame3_numeric_contig, cluster_df3], axis=1)
+#protein names
+
+##cluster heatmaps
+#dataframes
+# Select the first and last columns of data_k1
+clusters_df1 = data_k1.iloc[:, [0, -1]]
+clusters_df2 = data_k2.iloc[:, [0, -1]]
+#clusters_df1 = data_k1.iloc[:, [0, -1]]
+clusters_df3 = data_k3.iloc[:, [0, -1]]
+
+clusters_df1.head()
+
+clusters_df1 = data_k1.iloc[:, [0, -1]]
+
+import plotly.graph_objs as go
+
+# set the protein column as the index
+clusters_df1 = clusters_df1.set_index('Protein')
+
+# create the heatmap using plotly
+fig = go.Figure(data=go.Heatmap(
+    z=clusters_df1,
+    x=clusters_df1.columns,
+    y=clusters_df1.index,
+    colorscale='Picnic'))
+
+fig.update_layout(
+    title='K-means Clusters:SEC Separation',
+    xaxis_title='Cluster',
+    yaxis_title='Protein')
+
+fig.show()
+
+fig.write_html("K-means_Clusters_SEC_Separation.html", auto_open=False, auto_play=False)
+
+clusters_df2 = data_k2.iloc[:, [0, -1]]
+
+import plotly.graph_objs as go
+
+# set the protein column as the index
+clusters_df2 = clusters_df2.set_index('Protein')
+
+# create the heatmap using plotly
+fig2 = go.Figure(data=go.Heatmap(
+    z=clusters_df2,
+    x=clusters_df2.columns,
+    y=clusters_df2.index,
+    colorscale='Picnic'))
+
+fig2.update_layout(
+    title='K-means Clusters:IEX Separation',
+    xaxis_title='Cluster',
+    yaxis_title='Protein')
+
+fig2.show()
+
+fig2.write_html("K-means_Clusters_IEX_Separation.html", auto_open=False, auto_play=False)
+
+clusters_df3 = data_k3.iloc[:, [0, -1]]
+
+import plotly.graph_objs as go
+
+# set the protein column as the index
+clusters_df3 = clusters_df3.set_index('Protein')
+
+# create the heatmap using plotly
+fig3 = go.Figure(data=go.Heatmap(
+    z=clusters_df3,
+    x=clusters_df3.columns,
+    y=clusters_df3.index,
+    colorscale='Picnic'))
+
+fig3.update_layout(
+    title='K-means Clusters:SEC Separation 2018',
+    xaxis_title='Cluster',
+    yaxis_title='Protein')
+
+fig3.show()
+
+fig3.write_html("K-means_Clusters_SEC_Separation_2018.html", auto_open=False, auto_play=False)
+
+import plotly.express as px
+import pandas as pd
+import numpy as np
+import scipy.cluster.hierarchy as sch
+import plotly.figure_factory as ff
+
+# Calculate linkage matrix
+matrix01 = sch.linkage(df01_numeric_contig.T, method='average')
+
+# Create dendrogram figure using plotly.figure_factory
+HCSEC = ff.create_dendrogram(matrix01, orientation='left')
+
+# Set axis labels and title
+HCSEC.update_layout(xaxis_title="Distance", yaxis_title="Protein", title="Hierarchical Clustering: SEC separation")
+
+# Adjust spacing between branches and marker size/color
+HCSEC.update_traces(
+    orientation='h',
+    marker={'color': 'black', 'size': 2},
+    textposition='top center',
+    textfont={'size': 1},
+    hovertemplate='(%{x:.2f}, %{y})<extra></extra>',
+    showlegend=False)
+
+# Add protein names to the figure
+HCSEC.update_yaxes(ticktext=df01.iloc[:, 0])
+# Show the figure
+#HCSEC.show()
+# Show the figure
+HCSEC.update_layout(
+    xaxis_title="Distance",
+    yaxis_title="Protein",
+    title={
+        'text': "Hierarchical Clustering: SEC separation",
+        'x': 0.9, # position title at center of plot
+        'y': 0.96, # move title up slightly
+        'xanchor': 'center', # set horizontal alignment to center
+        'yanchor': 'top' # set vertical alignment to top
+    },
+    height=1500,
+    width=3000
+)
+#HCSEC.show()
+HCSEC.write_html("Hierarchical_Clustering_SEC_separation.html", auto_open=True, auto_play=False)
+
+# Calculate linkage matrix
+matrix02 = sch.linkage(df02_numeric_contig.T, method='average')
+
+# Create dendrogram figure using plotly.figure_factory
+HCIEX = ff.create_dendrogram(matrix02, orientation='left')
+
+# Set axis labels and title
+HCIEX.update_layout(xaxis_title="Distance", yaxis_title="Protein", title="Hierarchical Clustering: IEX separation")
+
+# Adjust spacing between branches and marker size/color
+HCIEX.update_traces(
+    orientation='h',
+    marker={'color': 'black', 'size': 2},
+    textposition='top center',
+    textfont={'size': 1},
+    hovertemplate='(%{x:.2f}, %{y})<extra></extra>',
+    showlegend=False)
+
+# Add protein names to the figure
+HCIEX.update_yaxes(ticktext=df01.iloc[:, 0])
+# Show the figure
+#HCSEC.show()
+# Show the figure
+HCIEX.update_layout(
+    xaxis_title="Distance",
+    yaxis_title="Protein",
+    title={
+        'text': "Hierarchical Clustering: IEX separation",
+        'x': 0.9, # position title at center of plot
+        'y': 0.96, # move title up slightly
+        'xanchor': 'center', # set horizontal alignment to center
+        'yanchor': 'top' # set vertical alignment to top
+    },
+    height=1500,
+    width=3000
+)
+
+#HCIEX.show()
+HCIEX.write_html("Hierarchical_Clustering_IEX_separation.html", auto_open=True, auto_play=False)
+
+# Calculate linkage matrix
+Z03 = sch.linkage(df03_numeric_contig.T, method='average')
+
+# Create dendrogram figure using plotly.figure_factory
+HCSECOP = ff.create_dendrogram(Z03, orientation='left')
+
+# Set axis labels and title
+HCSECOP.update_layout(xaxis_title="Distance", yaxis_title="Protein", title="Hierarchical Clustering: SEC separation 2018")
+
+# Adjust spacing between branches and marker size/color
+HCSECOP.update_traces(
+    orientation='h',
+    marker={'color': 'black', 'size': 2},
+    textposition='top center',
+    textfont={'size': 1},
+    hovertemplate='(%{x:.2f}, %{y})<extra></extra>',
+    showlegend=False)
+
+# Add protein names to the figure
+HCSECOP.update_yaxes(ticktext=df01.iloc[:, 0])
+# Show the figure
+#HCSEC.show()
+# Show the figure
+HCSECOP.update_layout(
+    xaxis_title="Distance",
+    yaxis_title="Protein",
+    title={
+        'text': "Hierarchical Clustering: SEC separation 2018",
+        'x': 0.9, # position title at center of plot
+        'y': 0.96, # move title up slightly
+        'xanchor': 'center', # set horizontal alignment to center
+        'yanchor': 'top' # set vertical alignment to top
+    },
+    height=1500,
+    width=3000
+)
+#HCSECOP.show()
+HCSECOP.write_html("Hierarchical_Clustering_SEC_separation_2018.html", auto_open=False, auto_play=False)
